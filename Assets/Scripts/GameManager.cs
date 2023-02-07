@@ -33,12 +33,26 @@ public class GameManager : MonoBehaviour
     private string currentWord;
     private string remainingString;
 
+    public void AddBalance(int value)
+    {
+        balance += value;
+        balanceText.text = balance.ToString();
+    }
+
+
     private void Awake()
     {
         if (instance == null)
             instance = this;
         else
             Destroy(gameObject);
+
+        // setup UnityEvents
+        OnWildchar = new UnityEvent();
+        OnAutocomplete = new UnityEvent();
+        OnIncorrectLetter = new UnityEvent();
+        OnCorrectLetter = new UnityEvent();
+        OnCompleteWord = new UnityEvent();
     }
 
     private void Start()
@@ -47,13 +61,8 @@ public class GameManager : MonoBehaviour
         SetNewWord();
         charAmplifier = 1;
         balance = 0;
+        balanceText.text = balance.ToString();
 
-        // setup UnityEvents
-        OnWildchar = new UnityEvent();
-        OnAutocomplete = new UnityEvent();
-        OnIncorrectLetter = new UnityEvent();
-        OnCorrectLetter = new UnityEvent();
-        OnCompleteWord = new UnityEvent();
 
         // add listeners
         OnIncorrectLetter.AddListener(FinishWord);
@@ -63,12 +72,6 @@ public class GameManager : MonoBehaviour
     private void Update()
     {
         CheckInput();
-    }
-
-    private void AddBalance(int value)
-    {
-        balance += value;
-        balanceText.text = balance.ToString();
     }
     
     /// <summary>
@@ -110,7 +113,7 @@ public class GameManager : MonoBehaviour
     
     private void FinishWord()
     {
-        if (remainingString.Length == 0)
+        if (remainingString == string.Empty || remainingString[0] == '\r')
             AddBalance(currentWord.Length * charAmplifier);
 
         SetNewWord();
