@@ -4,8 +4,9 @@ using UnityEngine;
 
 public abstract class RegexAction : MonoBehaviour
 {
+    public float cooldownDuration;
+
     [HideInInspector] public int ID;
-    [HideInInspector] public float cooldownDuration;
     [HideInInspector] public bool isOnCooldown;
 
     public abstract void Activate();

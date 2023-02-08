@@ -39,6 +39,39 @@ public class GameManager : MonoBehaviour
         balanceText.text = balance.ToString();
     }
 
+    public void EnterLetter(char letter, bool isAutomatic = false)
+    {
+        // Special Case: Wildchar ('.')
+        if (letter == '.')
+        {
+            OnWildchar.Invoke();
+            return;
+        }
+        // Special Case: Autocomplete ('*')
+        else if (letter == '*')
+        {
+            OnAutocomplete.Invoke();
+            return;
+        }
+        // Special Case: Spacebar (' ')
+        else if (letter == ' ')
+        {
+            OnCompleteWord.Invoke();
+            return;
+        }
+        // wrong letter entered
+        else if (remainingString.Length == 0 || letter != remainingString[0])
+        {
+            OnIncorrectLetter.Invoke();
+            return;
+        }
+
+        // correct letter entered
+        AddBalance(charAmplifier);
+        remainingString = remainingString.Substring(1);
+        wordText.text = remainingString;
+        OnCorrectLetter.Invoke();
+    }
 
     private void Awake()
     {
@@ -121,46 +154,11 @@ public class GameManager : MonoBehaviour
 
     private void CheckInput()
     {
-        if (Input.anyKeyDown)
+        if (Input.anyKeyDown && !ShopManager.instance.isOpen)
         {
-            string keysPressed = Input.inputString;
-
-            foreach (char letter in keysPressed)
+            Debug.Log(Input.inputString);
+            foreach (char letter in Input.inputString)
                 EnterLetter(letter);
         }
-    }
-
-    private void EnterLetter(char letter, bool isAutomatic = false)
-    {
-        // Special Case: Wildchar ('.')
-        if (letter == '.')
-        {
-            OnWildchar.Invoke();
-            return;
-        }
-        // Special Case: Autocomplete ('*')
-        else if (letter == '*')
-        {
-            OnAutocomplete.Invoke();
-            return;
-        }
-        // Special Case: Spacebar (' ')
-        else if (letter == ' ')
-        {
-            OnCompleteWord.Invoke();
-            return;
-        }
-        // wrong letter entered
-        else if (remainingString.Length == 0 || letter != remainingString[0])
-        {
-            OnIncorrectLetter.Invoke();
-            return;
-        }
-
-        // correct letter entered
-        AddBalance(charAmplifier);
-        remainingString = remainingString.Substring(1);
-        wordText.text = remainingString;
-        OnCorrectLetter.Invoke();
     }
 }

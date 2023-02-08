@@ -5,18 +5,23 @@ using UnityEngine.Events;
 using UnityEngine.UI;
 using TMPro;
 
-[RequireComponent(typeof(Animator))]
+[RequireComponent(typeof(Animation))]
 public class ShopManager : MonoBehaviour
 {
     [HideInInspector] public static ShopManager instance { private set; get; }
 
+    [HideInInspector] public bool isOpen { private set; get; }
+
     [HideInInspector] public UnityEvent OnOpenShop;
     [HideInInspector] public UnityEvent OnCloseShop;
 
-    [HideInInspector] public Queue<Wildchar> wildchars;
-    [HideInInspector] public Queue<Autocomplete> autocompletes;
+    [HideInInspector] public List<Wildchar> wildchars;
+    [HideInInspector] public List<Autocomplete> autocompletes;
 
+    [Header("Keybinds")]
     [SerializeField] private KeyCode toggleKey = KeyCode.Tab;
+    [SerializeField] private KeyCode purchaseWildcharKey = KeyCode.Alpha1;
+    [SerializeField] private KeyCode purchaseAutocompleteKey = KeyCode.Alpha2;
 
     [Space(5)]
 
@@ -29,43 +34,42 @@ public class ShopManager : MonoBehaviour
     [Space(10)]
 
     [Header("References")]
-    [SerializeField] private Transform shopPanel;
     [SerializeField] private UpgradeReferences wildcharReferences;
     [SerializeField] private UpgradeReferences autocompleteReferences;
 
     private int wildcharPrice;
     private int autocompletePrice;
 
-    private Animator toggleAnimator;
-    private bool isOpen;
-    private bool isAnimating;
+    private Animation toggleAnimation;
 
     public void PurchaseWildchar()
     {
-        if (GameManager.instance.balance >= wildcharPrice)
-            GameManager.instance.AddBalance(-wildcharPrice);
-        else
+        if (GameManager.instance.balance < wildcharPrice)
             return;
-
+            
+        GameManager.instance.AddBalance(-wildcharPrice);
+        
         Wildchar wildchar = Instantiate(wildcharReferences.prefab, wildcharReferences.parent)
             .GetComponent<Wildchar>();
-        wildchars.Enqueue(wildchar);
+        wildchars.Add(wildchar);
 
         wildcharPrice *= 2;
+        wildcharReferences.priceText.text = wildcharPrice.ToString();
     }
 
     public void PurchaseAutocomplete()
     {
-        if (GameManager.instance.balance >= autocompletePrice)
-            GameManager.instance.AddBalance(-autocompletePrice);
-        else
+        if (GameManager.instance.balance < autocompletePrice)
             return;
+            
+        GameManager.instance.AddBalance(-autocompletePrice);
         
         Autocomplete autocomplete = Instantiate(autocompleteReferences.prefab, autocompleteReferences.parent)
             .GetComponent<Autocomplete>();
-        autocompletes.Enqueue(autocomplete);
+        autocompletes.Add(autocomplete);
 
         autocompletePrice *= 2;
+        autocompleteReferences.priceText.text = autocompletePrice.ToString();
     }
 
     private void Awake()
@@ -75,7 +79,7 @@ public class ShopManager : MonoBehaviour
         else
             Destroy(gameObject);
 
-        toggleAnimator = GetComponent<Animator>();
+        toggleAnimation = GetComponent<Animation>();
 
         // setup events
         OnOpenShop = new UnityEvent();
@@ -93,43 +97,41 @@ public class ShopManager : MonoBehaviour
         OnCloseShop.AddListener(Close);
         GameManager.instance.OnWildchar.AddListener(UseWildchar);
         GameManager.instance.OnAutocomplete.AddListener(UseAutocomplete);
+
+        // setup upgrade prices
+        wildcharReferences.priceText.text = wildcharPrice.ToString();
+        autocompleteReferences.priceText.text = autocompletePrice.ToString();
     }
 
     private void Update()
     {
-        if (Input.GetKeyDown(toggleKey) && !isAnimating)
+        if (Input.GetKeyDown(toggleKey) && !toggleAnimation.isPlaying)
         {
             if (isOpen)
                 OnCloseShop.Invoke();
             else
                 OnOpenShop.Invoke();
         }
+
+        if (isOpen)
+        {
+            if (Input.GetKeyDown(purchaseWildcharKey))
+                PurchaseWildchar();
+            else if (Input.GetKeyDown(purchaseAutocompleteKey))
+                PurchaseAutocomplete();
+        }
     }
 
     private void Open()
     {
-        StartCoroutine(PlayOpen());
-    }
-
-    private IEnumerator PlayOpen()
-    {
-        isAnimating = true;
-        toggleAnimator.Play("ShopOpen");
-        yield return new WaitForSeconds(toggleAnimator.GetCurrentAnimatorStateInfo(0).length);
-        isAnimating = false;
+        toggleAnimation.Play("ShopOpen");
+        isOpen = true;
     }
 
     private void Close()
     {
-        StartCoroutine(PlayClose());
-    }
-
-    private IEnumerator PlayClose()
-    {
-        isAnimating = true;
-        toggleAnimator.Play("ShopClose");
-        yield return new WaitForSeconds(toggleAnimator.GetCurrentAnimatorStateInfo(0).length);
-        isAnimating = false;
+        toggleAnimation.Play("ShopClose");
+        isOpen = false;
     }
 
     private void UseWildchar()
@@ -137,9 +139,10 @@ public class ShopManager : MonoBehaviour
         if (wildchars.Count > 0)
         {
             // remove the wildchar in the front of the queue, activate it, then move it to the back
-            Wildchar wildchar = wildchars.Dequeue();
+            Wildchar wildchar = wildchars[0];
+            wildchars.RemoveAt(0);
             wildchar.Activate();
-            wildchars.Enqueue(wildchar);
+            wildchars.Add(wildchar);
         }
         else
             GameManager.instance.OnIncorrectLetter.Invoke();
@@ -150,9 +153,9 @@ public class ShopManager : MonoBehaviour
         if (autocompletes.Count > 0)
         {
             // remove the autocomplete in the front of the queue, activate it, then move it to the back
-            Autocomplete autocomplete = autocompletes.Dequeue();
+            Autocomplete autocomplete = autocompletes[0];
             autocomplete.Activate();
-            autocompletes.Enqueue(autocomplete);
+            autocompletes.Add(autocomplete);
         }
         else
             GameManager.instance.OnIncorrectLetter.Invoke();
@@ -164,4 +167,5 @@ public struct UpgradeReferences
 {
     public Transform parent;
     public GameObject prefab;
+    public TMP_Text priceText;
 }
