@@ -126,10 +126,14 @@ public class GameManager : MonoBehaviour
 
     private void Update()
     {
-        CheckInput();
-        
-        if (Input.GetKeyDown(KeyCode.Backslash) && Input.GetKey(KeyCode.P))
+        if (Input.GetKey(KeyCode.Backslash) && Input.GetKeyDown(KeyCode.P))
+        {
             AddBalance(1000);
+        }
+        else
+        {
+            CheckInput();
+        }
     }
     
     /// <summary>

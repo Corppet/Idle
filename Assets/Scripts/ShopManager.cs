@@ -24,6 +24,7 @@ public class ShopManager : MonoBehaviour
     [SerializeField] private KeyCode purchaseWildcharKey = KeyCode.Alpha1;
     [SerializeField] private KeyCode purchaseAutocompleteKey = KeyCode.Alpha2;
     [SerializeField] private KeyCode purchaseAutofillKey = KeyCode.Alpha3;
+    [SerializeField] private KeyCode purchaseAmplifierKey = KeyCode.Alpha4;
 
     [Space(5)]
 
@@ -34,6 +35,8 @@ public class ShopManager : MonoBehaviour
     [SerializeField] private int startingAutocompletePrice = 100;
     [Range(0, 500)]
     [SerializeField] private int startingAutofillPrice = 50;
+    [Range(0, 200)]
+    [SerializeField] private int startingAmplifierPrice = 20;
 
     [Space(10)]
 
@@ -41,10 +44,12 @@ public class ShopManager : MonoBehaviour
     [SerializeField] private UpgradeReferences wildcharReferences;
     [SerializeField] private UpgradeReferences autocompleteReferences;
     [SerializeField] private UpgradeReferences autofillReferences;
+    [SerializeField] private UpgradeReferences amplifierReferences;
 
     private int wildcharPrice;
     private int autocompletePrice;
     private int autofillPrice;
+    private int amplifierPrice;
 
     private Animation toggleAnimation;
 
@@ -60,7 +65,7 @@ public class ShopManager : MonoBehaviour
         wildchar.ID = wildchars.Count;
         wildchars.Add(wildchar);
 
-        wildcharPrice *= 2;
+        wildcharPrice += 10;
         wildcharReferences.priceText.text = wildcharPrice.ToString();
     }
 
@@ -92,8 +97,24 @@ public class ShopManager : MonoBehaviour
         autofill.ID = autofills.Count;
         autofills.Add(autofill);
 
-        autofillPrice *= 2;
+        autofillPrice += 25;
         autofillReferences.priceText.text = autofillPrice.ToString();
+    }
+
+    public void PurchaseAmplifier()
+    {
+        GameManager gm = GameManager.instance;
+
+        if (gm.balance < amplifierPrice)
+            return;
+
+        gm.AddBalance(-amplifierPrice);
+
+        gm.charAmplifier++;
+        amplifierReferences.countText.text = gm.charAmplifier.ToString();
+
+        amplifierPrice += 10;
+        amplifierReferences.priceText.text = amplifierPrice.ToString();
     }
 
     private void Awake()
@@ -116,6 +137,7 @@ public class ShopManager : MonoBehaviour
         wildcharPrice = startingWildcharPrice;
         autocompletePrice = startingAutocompletePrice;
         autofillPrice = startingAutofillPrice;
+        amplifierPrice = startingAmplifierPrice;
 
         // setup listeners
         OnOpenShop.AddListener(Open);
@@ -130,6 +152,9 @@ public class ShopManager : MonoBehaviour
         wildcharReferences.priceText.text = wildcharPrice.ToString();
         autocompleteReferences.priceText.text = autocompletePrice.ToString();
         autofillReferences.priceText.text = autofillPrice.ToString();
+        amplifierReferences.priceText.text = amplifierPrice.ToString();
+
+        amplifierReferences.countText.text = gm.charAmplifier.ToString();
     }
 
     private void Update()
@@ -150,9 +175,12 @@ public class ShopManager : MonoBehaviour
                 PurchaseAutocomplete();
             else if (Input.GetKeyDown(purchaseAutofillKey))
                 PurchaseAutofill();
+            else if (Input.GetKeyDown(purchaseAmplifierKey))
+                PurchaseAmplifier();
         }
 
         UseAutofill();
+        UpdateTimers();
     }
 
     private void Open()
@@ -209,6 +237,102 @@ public class ShopManager : MonoBehaviour
             autofills.Add(autofill);
         }
     }
+
+    private void UpdateTimers()
+    {
+        // update wildchar timers
+        TMP_Text count = wildcharReferences.countText;
+        Image timer = wildcharReferences.timerImage;
+        if (wildchars.Count > 0)
+        {
+            Wildchar front = wildchars[0];
+            if (front.isOnCooldown)
+            {
+                count.enabled = false;
+                timer.enabled = true;
+
+                timer.fillAmount = front.remainingCooldown / front.cooldownDuration;
+            }
+            else
+            {
+                count.enabled = true;
+                timer.enabled = false;
+
+                int readyCount = 0;
+                foreach (Wildchar wildchar in wildchars)
+                {
+                    if (wildchar.isOnCooldown)
+                        break;
+
+                    readyCount++;
+                }
+                count.text = readyCount.ToString();
+            }
+        }
+        else
+        {
+            count.enabled = true;
+            timer.enabled = false;
+
+            count.text = "0";
+        }
+
+        // update autocomplete timers
+        count = autocompleteReferences.countText;
+        timer = autocompleteReferences.timerImage;
+        if (autocompletes.Count > 0)
+        {
+            Autocomplete front = autocompletes[0];
+            if (front.isOnCooldown)
+            {
+                count.enabled = false;
+                timer.enabled = true;
+
+                timer.fillAmount = front.remainingCooldown / front.cooldownDuration;
+            }
+            else
+            {
+                count.enabled = true;
+                timer.enabled = false;
+
+                int readyCount = 0;
+                foreach (Autocomplete autocomplete in autocompletes)
+                {
+                    if (autocomplete.isOnCooldown)
+                        break;
+
+                    readyCount++;
+                }
+                count.text = readyCount.ToString();
+            }
+        }
+        else
+        {
+            count.enabled = true;
+            timer.enabled = false;
+
+            count.text = "0";
+        }
+
+        // update autofill timers
+        count = autofillReferences.countText;
+        timer = autofillReferences.timerImage;
+        if (autofills.Count > 0)
+        {
+            timer.enabled = true;
+
+            count.text = autofills.Count.ToString();
+
+            Autofill front = autofills[0];
+            timer.fillAmount = front.remainingCooldown / front.cooldownDuration;
+        }
+        else
+        {
+            timer.enabled = false;
+
+            count.text = "0";
+        }
+    }
 }
 
 [System.Serializable]
@@ -218,5 +342,5 @@ public struct UpgradeReferences
     public GameObject prefab;
     public TMP_Text priceText;
     public TMP_Text countText;
-    public Slider timerSlider;
+    public Image timerImage;
 }
