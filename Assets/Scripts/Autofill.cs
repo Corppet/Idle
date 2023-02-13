@@ -2,7 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class Wildchar : RegexAction
+public class Autofill : RegexAction
 {
     public override void Activate()
     {

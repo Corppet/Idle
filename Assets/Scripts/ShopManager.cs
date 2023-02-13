@@ -17,11 +17,13 @@ public class ShopManager : MonoBehaviour
 
     [HideInInspector] public List<Wildchar> wildchars;
     [HideInInspector] public List<Autocomplete> autocompletes;
+    [HideInInspector] public List<Autofill> autofills;
 
     [Header("Keybinds")]
     [SerializeField] private KeyCode toggleKey = KeyCode.Tab;
     [SerializeField] private KeyCode purchaseWildcharKey = KeyCode.Alpha1;
     [SerializeField] private KeyCode purchaseAutocompleteKey = KeyCode.Alpha2;
+    [SerializeField] private KeyCode purchaseAutofillKey = KeyCode.Alpha3;
 
     [Space(5)]
 
@@ -30,15 +32,19 @@ public class ShopManager : MonoBehaviour
     [SerializeField] private int startingWildcharPrice = 10;
     [Range(0, 1000)]
     [SerializeField] private int startingAutocompletePrice = 100;
+    [Range(0, 500)]
+    [SerializeField] private int startingAutofillPrice = 50;
 
     [Space(10)]
 
     [Header("References")]
     [SerializeField] private UpgradeReferences wildcharReferences;
     [SerializeField] private UpgradeReferences autocompleteReferences;
+    [SerializeField] private UpgradeReferences autofillReferences;
 
     private int wildcharPrice;
     private int autocompletePrice;
+    private int autofillPrice;
 
     private Animation toggleAnimation;
 
@@ -51,6 +57,7 @@ public class ShopManager : MonoBehaviour
         
         Wildchar wildchar = Instantiate(wildcharReferences.prefab, wildcharReferences.parent)
             .GetComponent<Wildchar>();
+        wildchar.ID = wildchars.Count;
         wildchars.Add(wildchar);
 
         wildcharPrice *= 2;
@@ -66,10 +73,27 @@ public class ShopManager : MonoBehaviour
         
         Autocomplete autocomplete = Instantiate(autocompleteReferences.prefab, autocompleteReferences.parent)
             .GetComponent<Autocomplete>();
+        autocomplete.ID = autocompletes.Count;
         autocompletes.Add(autocomplete);
 
         autocompletePrice *= 2;
         autocompleteReferences.priceText.text = autocompletePrice.ToString();
+    }
+
+    public void PurchaseAutofill()
+    {
+        if (GameManager.instance.balance < autofillPrice)
+            return;
+            
+        GameManager.instance.AddBalance(-autofillPrice);
+        
+        Autofill autofill = Instantiate(autofillReferences.prefab, autofillReferences.parent)
+            .GetComponent<Autofill>();
+        autofill.ID = autofills.Count;
+        autofills.Add(autofill);
+
+        autofillPrice *= 2;
+        autofillReferences.priceText.text = autofillPrice.ToString();
     }
 
     private void Awake()
@@ -91,16 +115,21 @@ public class ShopManager : MonoBehaviour
         isOpen = false;
         wildcharPrice = startingWildcharPrice;
         autocompletePrice = startingAutocompletePrice;
+        autofillPrice = startingAutofillPrice;
 
         // setup listeners
         OnOpenShop.AddListener(Open);
         OnCloseShop.AddListener(Close);
-        GameManager.instance.OnWildchar.AddListener(UseWildchar);
-        GameManager.instance.OnAutocomplete.AddListener(UseAutocomplete);
+
+        GameManager gm = GameManager.instance;
+        gm.OnWildchar.AddListener(UseWildchar);
+        gm.OnAutocomplete.AddListener(UseAutocomplete);
+        gm.OnAutofill.AddListener(UseAutofill);
 
         // setup upgrade prices
         wildcharReferences.priceText.text = wildcharPrice.ToString();
         autocompleteReferences.priceText.text = autocompletePrice.ToString();
+        autofillReferences.priceText.text = autofillPrice.ToString();
     }
 
     private void Update()
@@ -119,7 +148,11 @@ public class ShopManager : MonoBehaviour
                 PurchaseWildchar();
             else if (Input.GetKeyDown(purchaseAutocompleteKey))
                 PurchaseAutocomplete();
+            else if (Input.GetKeyDown(purchaseAutofillKey))
+                PurchaseAutofill();
         }
+
+        UseAutofill();
     }
 
     private void Open()
@@ -136,7 +169,7 @@ public class ShopManager : MonoBehaviour
 
     private void UseWildchar()
     {
-        if (wildchars.Count > 0)
+        if (wildchars.Count > 0 && !wildchars[0].isOnCooldown)
         {
             // remove the wildchar in the front of the queue, activate it, then move it to the back
             Wildchar wildchar = wildchars[0];
@@ -145,12 +178,14 @@ public class ShopManager : MonoBehaviour
             wildchars.Add(wildchar);
         }
         else
+        {
             GameManager.instance.OnIncorrectLetter.Invoke();
+        }
     }
 
     private void UseAutocomplete()
     {
-        if (autocompletes.Count > 0)
+        if (autocompletes.Count > 0 && !autocompletes[0].isOnCooldown)
         {
             // remove the autocomplete in the front of the queue, activate it, then move it to the back
             Autocomplete autocomplete = autocompletes[0];
@@ -158,7 +193,21 @@ public class ShopManager : MonoBehaviour
             autocompletes.Add(autocomplete);
         }
         else
+        {
             GameManager.instance.OnIncorrectLetter.Invoke();
+        }
+    }
+
+    private void UseAutofill()
+    {
+        if (autofills.Count > 0 && !autofills[0].isOnCooldown)
+        {
+            // remove the autofill in the front of the queue, activate it, then move it to the back
+            Autofill autofill = autofills[0];
+            autofills.RemoveAt(0);
+            autofill.Activate();
+            autofills.Add(autofill);
+        }
     }
 }
 
@@ -168,4 +217,6 @@ public struct UpgradeReferences
     public Transform parent;
     public GameObject prefab;
     public TMP_Text priceText;
+    public TMP_Text countText;
+    public Slider timerSlider;
 }

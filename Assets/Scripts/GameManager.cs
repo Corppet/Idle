@@ -11,6 +11,8 @@ public class GameManager : MonoBehaviour
 
     [HideInInspector] public UnityEvent OnWildchar;
     [HideInInspector] public UnityEvent OnAutocomplete;
+    [HideInInspector] public UnityEvent OnAutofill;
+
     [HideInInspector] public UnityEvent OnIncorrectLetter;
     [HideInInspector] public UnityEvent OnCorrectLetter;
     [HideInInspector] public UnityEvent OnCompleteWord;
@@ -18,9 +20,14 @@ public class GameManager : MonoBehaviour
     [HideInInspector] public int charAmplifier;
     [HideInInspector] public int balance;
 
+    [HideInInspector] public string currentWord;
+    [HideInInspector] public string remainingString;
+    [HideInInspector] public string completedString;
+
     [Tooltip("Text file containing all the possible words. " +
         "Each line should be a single unique word.")]
     [SerializeField] private TextAsset wordBank;
+    [SerializeField] private Color completedStringColor = Color.yellow;
 
     [Space(10)]
 
@@ -30,8 +37,6 @@ public class GameManager : MonoBehaviour
 
     private List<string> availableWords;
     private List<string> usedWords;
-    private string currentWord;
-    private string remainingString;
 
     public void AddBalance(int value)
     {
@@ -39,7 +44,7 @@ public class GameManager : MonoBehaviour
         balanceText.text = balance.ToString();
     }
 
-    public void EnterLetter(char letter, bool isAutomatic = false)
+    public void EnterLetter(char letter)
     {
         // Special Case: Wildchar ('.')
         if (letter == '.')
@@ -68,9 +73,24 @@ public class GameManager : MonoBehaviour
 
         // correct letter entered
         AddBalance(charAmplifier);
+        completedString += remainingString[0];
         remainingString = remainingString.Substring(1);
-        wordText.text = remainingString;
+        UpdateText();
         OnCorrectLetter.Invoke();
+    }
+
+    public void FinishWord()
+    {
+        if (remainingString == string.Empty || remainingString[0] == '\r')
+            AddBalance(currentWord.Length * charAmplifier);
+
+        SetNewWord();
+    }
+
+    public void UpdateText()
+    {
+        wordText.text = "<color=#" + ColorUtility.ToHtmlStringRGB(completedStringColor) + ">" 
+            + completedString + "</color>" + remainingString;
     }
 
     private void Awake()
@@ -83,6 +103,8 @@ public class GameManager : MonoBehaviour
         // setup UnityEvents
         OnWildchar = new UnityEvent();
         OnAutocomplete = new UnityEvent();
+        OnAutofill = new UnityEvent();
+
         OnIncorrectLetter = new UnityEvent();
         OnCorrectLetter = new UnityEvent();
         OnCompleteWord = new UnityEvent();
@@ -105,6 +127,9 @@ public class GameManager : MonoBehaviour
     private void Update()
     {
         CheckInput();
+        
+        if (Input.GetKeyDown(KeyCode.Backslash) && Input.GetKey(KeyCode.P))
+            AddBalance(1000);
     }
     
     /// <summary>
@@ -141,16 +166,10 @@ public class GameManager : MonoBehaviour
     {
         currentWord = GetNewWord();
         remainingString = currentWord;
+        completedString = string.Empty;
         wordText.text = currentWord;
     }
     
-    private void FinishWord()
-    {
-        if (remainingString == string.Empty || remainingString[0] == '\r')
-            AddBalance(currentWord.Length * charAmplifier);
-
-        SetNewWord();
-    }
 
     private void CheckInput()
     {

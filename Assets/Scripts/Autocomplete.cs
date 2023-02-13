@@ -9,13 +9,11 @@ public class Autocomplete : RegexAction
         if (isOnCooldown)
             return;
 
-        StartCoroutine(StartCooldown(cooldownDuration));
-    }
+        GameManager gm = GameManager.instance;
+        gm.AddBalance(gm.remainingString.Length * gm.charAmplifier);
+        gm.remainingString = string.Empty;
+        gm.FinishWord();
 
-    protected override IEnumerator StartCooldown(float duration)
-    {
-        isOnCooldown = true;
-        yield return new WaitForSeconds(duration);
-        isOnCooldown = false;
+        remainingCooldown = cooldownDuration;
     }
 }
