@@ -24,5 +24,6 @@ public class Autofill : RegexAction
         }
 
         remainingCooldown = cooldownDuration;
+        AudioManager.instance.PlayAutofill();
     }
 }

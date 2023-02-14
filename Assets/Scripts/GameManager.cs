@@ -32,16 +32,37 @@ public class GameManager : MonoBehaviour
     [Space(10)]
 
     [Header("References")]
+    [SerializeField] private Canvas canvas;
+    [SerializeField] private CanvasGroup title;
     [SerializeField] private TMP_Text wordText;
     [SerializeField] private TMP_Text balanceText;
+    [SerializeField] private GameObject addBalancePrefab;
 
     private List<string> availableWords;
     private List<string> usedWords;
+    private float idleTime;
 
-    public void AddBalance(int value)
+    public void AddBalance(int value, bool isCheat = false)
     {
         balance += value;
         balanceText.text = balance.ToString();
+
+        BalanceChange change = Instantiate(addBalancePrefab, canvas.transform)
+            .GetComponent<BalanceChange>();
+        change.SetPosition(balanceText.transform.position + new Vector3(0f, 50f, 0f));
+        if (isCheat && value > 9000)
+        {
+            change.SetText("It's over 9000!", Color.yellow);
+            AudioManager.instance.PlayCheat();
+        }
+        else if (value < 0)
+        {
+            change.SetText(value.ToString(), Color.red);
+        }
+        else
+        {
+            change.SetText("+" + value.ToString(), Color.green);
+        }
     }
 
     public void EnterLetter(char letter)
@@ -61,6 +82,7 @@ public class GameManager : MonoBehaviour
         // Special Case: Spacebar (' ')
         else if (letter == ' ')
         {
+            AudioManager.instance.PlaySpacebar();
             OnCompleteWord.Invoke();
             return;
         }
@@ -77,12 +99,19 @@ public class GameManager : MonoBehaviour
         remainingString = remainingString.Substring(1);
         UpdateText();
         OnCorrectLetter.Invoke();
+        AudioManager.instance.PlayKeyboard();
     }
 
     public void FinishWord()
     {
         if (remainingString == string.Empty || remainingString[0] == '\r')
+        {
             AddBalance(currentWord.Length * charAmplifier);
+        }
+        else
+        {
+            AudioManager.instance.PlayIncomplete();
+        }
 
         SetNewWord();
     }
@@ -116,6 +145,7 @@ public class GameManager : MonoBehaviour
         SetNewWord();
         charAmplifier = 1;
         balance = 0;
+        idleTime = 10f;
         balanceText.text = balance.ToString();
 
 
@@ -128,11 +158,21 @@ public class GameManager : MonoBehaviour
     {
         if (Input.GetKey(KeyCode.Backslash) && Input.GetKeyDown(KeyCode.P))
         {
-            AddBalance(1000);
+            AddBalance(9001, true);
         }
         else
         {
             CheckInput();
+        }
+
+        idleTime += Time.deltaTime;
+        if (idleTime < 10f)
+        {
+            title.alpha -= Time.deltaTime;
+        }
+        else
+        {
+            title.alpha += .25f * Time.deltaTime;
         }
     }
     
@@ -179,9 +219,12 @@ public class GameManager : MonoBehaviour
     {
         if (Input.anyKeyDown && !ShopManager.instance.isOpen)
         {
-            Debug.Log(Input.inputString);
             foreach (char letter in Input.inputString)
+            {
                 EnterLetter(letter);
+            }
+
+            idleTime = 0f;
         }
     }
 }

@@ -15,5 +15,6 @@ public class Autocomplete : RegexAction
         gm.FinishWord();
 
         remainingCooldown = cooldownDuration;
+        AudioManager.instance.PlayAutocomplete();
     }
 }

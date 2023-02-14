@@ -67,6 +67,8 @@ public class ShopManager : MonoBehaviour
 
         wildcharPrice += 10;
         wildcharReferences.priceText.text = wildcharPrice.ToString();
+        
+        AudioManager.instance.PlayPurchase();
     }
 
     public void PurchaseAutocomplete()
@@ -83,6 +85,8 @@ public class ShopManager : MonoBehaviour
 
         autocompletePrice *= 2;
         autocompleteReferences.priceText.text = autocompletePrice.ToString();
+
+        AudioManager.instance.PlayPurchase();
     }
 
     public void PurchaseAutofill()
@@ -97,8 +101,12 @@ public class ShopManager : MonoBehaviour
         autofill.ID = autofills.Count;
         autofills.Add(autofill);
 
+        autofillReferences.countText.text = autofills.Count.ToString();
+
         autofillPrice += 25;
         autofillReferences.priceText.text = autofillPrice.ToString();
+
+        AudioManager.instance.PlayPurchase();
     }
 
     public void PurchaseAmplifier()
@@ -115,6 +123,8 @@ public class ShopManager : MonoBehaviour
 
         amplifierPrice += 10;
         amplifierReferences.priceText.text = amplifierPrice.ToString();
+
+        AudioManager.instance.PlayPurchase();
     }
 
     private void Awake()
@@ -161,6 +171,7 @@ public class ShopManager : MonoBehaviour
     {
         if (Input.GetKeyDown(toggleKey) && !toggleAnimation.isPlaying)
         {
+            AudioManager.instance.PlayTab();
             if (isOpen)
                 OnCloseShop.Invoke();
             else
@@ -217,6 +228,7 @@ public class ShopManager : MonoBehaviour
         {
             // remove the autocomplete in the front of the queue, activate it, then move it to the back
             Autocomplete autocomplete = autocompletes[0];
+            autocompletes.RemoveAt(0);
             autocomplete.Activate();
             autocompletes.Add(autocomplete);
         }
@@ -228,14 +240,26 @@ public class ShopManager : MonoBehaviour
 
     private void UseAutofill()
     {
-        if (autofills.Count > 0 && !autofills[0].isOnCooldown)
+        if (autofills.Count == 0)
         {
-            // remove the autofill in the front of the queue, activate it, then move it to the back
-            Autofill autofill = autofills[0];
-            autofills.RemoveAt(0);
-            autofill.Activate();
-            autofills.Add(autofill);
+            autofillReferences.countText.text = "0";
+            autofillReferences.timerImage.fillAmount = 0;
+            return;
         }
+
+        float lowestCD = float.MaxValue;
+        foreach (Autofill autofill in autofills)
+        {
+            if (autofill.isOnCooldown)
+            {
+                lowestCD = Mathf.Min(autofill.remainingCooldown, lowestCD);
+            }
+            else
+            {
+                autofill.Activate();
+            }
+        }
+        autofillReferences.timerImage.fillAmount = lowestCD / autofills[0].cooldownDuration;
     }
 
     private void UpdateTimers()
@@ -309,25 +333,6 @@ public class ShopManager : MonoBehaviour
         else
         {
             count.enabled = true;
-            timer.enabled = false;
-
-            count.text = "0";
-        }
-
-        // update autofill timers
-        count = autofillReferences.countText;
-        timer = autofillReferences.timerImage;
-        if (autofills.Count > 0)
-        {
-            timer.enabled = true;
-
-            count.text = autofills.Count.ToString();
-
-            Autofill front = autofills[0];
-            timer.fillAmount = front.remainingCooldown / front.cooldownDuration;
-        }
-        else
-        {
             timer.enabled = false;
 
             count.text = "0";

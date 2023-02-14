@@ -24,5 +24,6 @@ public class Wildchar : RegexAction
         }
 
         remainingCooldown = cooldownDuration;
+        AudioManager.instance.PlayWildchar();
     }
 }
